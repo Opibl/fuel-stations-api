@@ -2,14 +2,18 @@
 
 API REST desarrollada en **Python con FastAPI** para la búsqueda de estaciones de combustible utilizando la API inspeccionada de **Bencina en Línea**.
 
+---
+
 ## Objetivo
 
-Permitir la búsqueda de estaciones de combustible en base a coordenadas geográficas y distintos criterios de búsqueda:
+Permitir la búsqueda de estaciones de combustible en base a coordenadas geográficas y distintos criterios de búsqueda.
+
+### Casos implementados
 
 * Estación más cercana por producto
-* Estación más cercana con menor precio
-* Estación más cercana con tienda
-* Estación más cercana con tienda y menor precio
+* Estación más cercana con menor precio por producto
+* Estación más cercana con tienda por producto
+* Estación más cercana con tienda y menor precio por producto
 
 ---
 
@@ -19,11 +23,12 @@ Permitir la búsqueda de estaciones de combustible en base a coordenadas geográ
 * FastAPI
 * Uvicorn
 * Requests
+* Pytest
 * Swagger UI
 
 ---
 
-## Estructura del proyecto
+## Arquitectura del proyecto
 
 ```text
 fuel-stations-api/
@@ -38,7 +43,8 @@ fuel-stations-api/
 │   │   └── exceptions.py
 │   │
 │   ├── models/
-│   │   └── response.py
+│   │   ├── response.py
+│   │   └── station.py
 │   │
 │   ├── schemas/
 │   │   └── station_schema.py
@@ -53,7 +59,12 @@ fuel-stations-api/
 │   │
 │   └── main.py
 │
+├── test/
+│   └── test_search_service.py
+│
+├── conftest.py
 ├── requirements.txt
+├── .gitignore
 └── README.md
 ```
 
@@ -61,14 +72,14 @@ fuel-stations-api/
 
 ## Instalación
 
-Clonar repositorio:
+Clonar el repositorio:
 
 ```bash
-git clone <URL_DEL_REPOSITORIO>
+git clone https://github.com/Opibl/fuel-stations-api.git
 cd fuel-stations-api
 ```
 
-Crear entorno virtual:
+Crear entorno virtual.
 
 ### Windows
 
@@ -104,10 +115,26 @@ Servidor disponible en:
 http://127.0.0.1:8000
 ```
 
-Swagger UI:
+Documentación Swagger:
 
 ```text
 http://127.0.0.1:8000/docs
+```
+
+---
+
+## Ejecutar tests
+
+Se incorporó una prueba unitaria básica para validar la lógica de distancia geográfica.
+
+```bash
+pytest
+```
+
+Resultado esperado:
+
+```text
+1 passed
 ```
 
 ---
@@ -120,16 +147,18 @@ http://127.0.0.1:8000/docs
 GET /api/stations/search
 ```
 
-### Parámetros
+---
 
-| Parámetro | Tipo   | Requerido | Descripción                  |
-| --------- | ------ | --------- | ---------------------------- |
-| lat       | float  | Sí        | Latitud                      |
-| lng       | float  | Sí        | Longitud                     |
-| product   | string | Sí        | 93, 95, 97, diesel, kerosene |
-| nearest   | bool   | No        | Buscar más cercana           |
-| store     | bool   | No        | Filtrar con tienda           |
-| cheapest  | bool   | No        | Filtrar menor precio         |
+## Parámetros
+
+| Parámetro | Tipo   | Requerido | Descripción                      |
+| --------- | ------ | --------- | -------------------------------- |
+| lat       | float  | Sí        | Latitud                          |
+| lng       | float  | Sí        | Longitud                         |
+| product   | string | Sí        | 93, 95, 97, diesel, kerosene     |
+| nearest   | bool   | No        | Buscar estación más cercana      |
+| store     | bool   | No        | Filtrar estaciones con tienda    |
+| cheapest  | bool   | No        | Buscar estación con menor precio |
 
 ---
 
@@ -141,25 +170,19 @@ GET /api/stations/search
 /api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true
 ```
 
----
-
-### 2. Más cercana con menor precio
+### 2. Estación más cercana con menor precio
 
 ```text
 /api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true&cheapest=true
 ```
 
----
-
-### 3. Más cercana con tienda
+### 3. Estación más cercana con tienda
 
 ```text
 /api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true&store=true
 ```
 
----
-
-### 4. Más cercana con tienda y menor precio
+### 4. Estación más cercana con tienda y menor precio
 
 ```text
 /api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true&store=true&cheapest=true
@@ -167,7 +190,7 @@ GET /api/stations/search
 
 ---
 
-## Respuesta ejemplo
+## Respuesta de ejemplo
 
 ```json
 {
@@ -194,6 +217,17 @@ GET /api/stations/search
 
 ---
 
+## Manejo de errores
+
+La API implementa manejo de errores y excepciones utilizando:
+
+* `HTTPException`
+* `StationNotFoundException`
+
+Se retornan respuestas HTTP informativas para errores de búsqueda o parámetros inválidos.
+
+---
+
 ## Fuente de datos
 
 La API utiliza datos obtenidos mediante inspección de la página:
@@ -212,4 +246,4 @@ https://api.bencinaenlinea.cl/api/estacion_ciudadano/{id}
 
 ## Autor
 
-Pedro Ignacio Basualto Leon 
+Pedro Ignacio Basualto León
