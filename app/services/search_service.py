@@ -1,3 +1,5 @@
+from app.models import station
+
 from .bencina_client import BencinaClient
 from .distance_service import DistanceService
 from ..models.response import SuccessResponse
@@ -428,37 +430,33 @@ class SearchService:
 
         return None
 
-    def _get_company_name(
-        self,
-        station
-    ):
-        company = (
-            station.get(
-                "Compania"
-            )
-            or station.get(
-                "compania"
-            )
-        )
+    def _get_company_name(self, station):
+        brand_code = station.get("marca")
 
-        if company:
-            return company
+        brand_map = {
+            4: "SHELL",
+            5: "COPEC",
+            151: "ARAMCO"
+        }
 
-        logo_url = (
-            station.get(
-                "logo"
-            )
+        if brand_code in brand_map:
+            return brand_map[brand_code]
+
+        logo_url = str(
+            station.get("logo")
             or ""
         ).lower()
 
-        if "copec" in logo_url:
-            return "COPEC"
-        elif "shell" in logo_url:
+        if "shell" in logo_url:
             return "SHELL"
         elif "aramco" in logo_url:
             return "ARAMCO"
+        elif "copec" in logo_url:
+            return "COPEC"
+        elif "logo5" in logo_url:
+            return "COPEC"
 
-        return "Sin marca"
+        return f"Marca {brand_code}"
 
     def _select_best_station(
         self,
