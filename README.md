@@ -244,6 +244,33 @@ https://api.bencinaenlinea.cl/api/estacion_ciudadano/{id}
 
 ---
 
+## Nota sobre la estructura de datos
+
+La prueba técnica incluye un ejemplo de respuesta JSON como referencia.
+
+Durante la implementación, se utilizó la **API real inspeccionada desde Bencina en Línea**, obtenida directamente desde la página oficial mediante inspección de red.
+
+La estructura de la respuesta real presenta algunas diferencias respecto al ejemplo entregado en la prueba, por lo que se realizó una **normalización de datos** para exponer un formato limpio, consistente y orientado al consumo del endpoint:
+
+```http
+GET /api/stations/search
+```
+
+De esta forma se mantiene toda la información relevante solicitada:
+
+* compañía
+* dirección
+* comuna
+* región
+* coordenadas
+* precio
+* tienda
+* distancia lineal
+
+Esta decisión se tomó para asegurar una respuesta REST consistente, limpia y fácil de consumir desde clientes externos.
+
+---
+
 ## Autor
 
 Pedro Ignacio Basualto León
