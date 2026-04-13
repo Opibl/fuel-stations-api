@@ -242,6 +242,20 @@ Endpoint inspeccionado:
 https://api.bencinaenlinea.cl/api/estacion_ciudadano/{id}
 ```
 
+## Nota sobre la obtención del listado
+
+Durante la inspección de la página oficial de **Bencina en Línea**, se identificó el endpoint público utilizado para consultar el detalle de una estación por identificador:
+
+```http
+GET /api/estacion_ciudadano/{id}
+```
+
+Sin embargo, no fue posible identificar un endpoint público de listado masivo de estaciones por zona o coordenadas mediante inspección de red.
+
+Por este motivo, la solución implementa una estrategia de consulta dinámica basada en identificadores reales observados desde la página, aplicando posteriormente la lógica de filtrado por producto, distancia, menor precio y disponibilidad de tienda.
+
+Esta decisión permite mantener el uso de la API inspeccionada solicitada en la prueba técnica, replicando el comportamiento observado desde la página web.
+
 ---
 
 ## Nota sobre la estructura de datos

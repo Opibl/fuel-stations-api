@@ -17,22 +17,19 @@ class BencinaClient:
         return response.json()["data"]
 
     def fetch_stations(self):
-        station_ids = [
-            1554,
-            1555,
-            1556,
-            1557,
-            1558,
-            1559
-        ]
-
         stations = []
 
-        for station_id in station_ids:
+        # rango dinámico de estaciones consultadas
+        start_id = 1500
+        end_id = 2000
+
+        for station_id in range(start_id, end_id + 1):
             try:
                 station = self.fetch_station_by_id(station_id)
                 stations.append(station)
-            except Exception:
+            except requests.RequestException:
+                continue
+            except KeyError:
                 continue
 
         return stations
