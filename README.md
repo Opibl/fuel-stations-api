@@ -241,7 +241,7 @@ Endpoint inspeccionado:
 ```text
 https://api.bencinaenlinea.cl/api/estacion_ciudadano/{id}
 ```
-
+---
 ## Nota sobre la obtención del listado
 
 Durante la inspección de la página oficial de **Bencina en Línea**, se identificó el endpoint público utilizado para consultar el detalle de una estación por identificador:
