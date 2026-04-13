@@ -24,7 +24,6 @@ class SearchService:
         stations = self.client.fetch_stations(lat, lng)
         candidates = []
 
-        # Primera pasada: filtrar por producto y calcular distancia
         for station in stations:
             price = self._get_product_price(
                 station,
@@ -107,7 +106,6 @@ class SearchService:
                 detail = self.client.fetch_station_by_id(
                     item["id"]
                 )
-                print("DETAIL RESPONSE:", detail)
             except Exception as e:
                 print(
                     f"Error detalle "
