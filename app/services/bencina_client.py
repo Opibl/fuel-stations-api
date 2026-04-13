@@ -1,35 +1,110 @@
 import requests
-from ..core.config import BENCINA_API_URL, REQUEST_TIMEOUT
+from requests.exceptions import RequestException, Timeout
+
+from ..core.config import (
+    BENCINA_API_URL,
+    REQUEST_TIMEOUT
+)
 
 
 class BencinaClient:
 
     def fetch_station_by_id(self, station_id: int):
-        url = f"{BENCINA_API_URL}/estacion_ciudadano/{station_id}"
-
-        response = requests.get(
-            url,
-            timeout=REQUEST_TIMEOUT
+        url = (
+            f"{BENCINA_API_URL}"
+            f"/estacion_ciudadano/{station_id}"
         )
 
-        response.raise_for_status()
+        try:
+            print(
+                f"[DETAIL REQUEST] {url}"
+            )
 
-        return response.json()["data"]
+            response = requests.get(
+                url,
+                timeout=REQUEST_TIMEOUT
+            )
 
-    def fetch_stations(self):
-        stations = []
+            print(
+                f"[DETAIL STATUS] "
+                f"{response.status_code}"
+            )
 
-        # rango dinámico de estaciones consultadas
-        start_id = 1500
-        end_id = 2000
+            response.raise_for_status()
 
-        for station_id in range(start_id, end_id + 1):
-            try:
-                station = self.fetch_station_by_id(station_id)
-                stations.append(station)
-            except requests.RequestException:
-                continue
-            except KeyError:
-                continue
+            data = response.json()
 
-        return stations
+            return data.get("data", {})
+
+        except Timeout:
+            print(
+                f"[TIMEOUT] estación "
+                f"{station_id}"
+            )
+            return {}
+
+        except RequestException as e:
+            print(
+                f"[REQUEST ERROR] "
+                f"{station_id}: {e}"
+            )
+            return {}
+
+        except Exception as e:
+            print(
+                f"[JSON ERROR] "
+                f"{station_id}: {e}"
+            )
+            return {}
+
+    def fetch_stations(self, lat, lng):
+        url = (
+            f"{BENCINA_API_URL}"
+            f"/busqueda_estacion_filtro"
+        )
+
+        params = {
+            "latitud": lat,
+            "longitud": lng
+        }
+
+        try:
+            print(
+                f"[SEARCH REQUEST] "
+                f"{url} {params}"
+            )
+
+            response = requests.get(
+                url,
+                params=params,
+                timeout=REQUEST_TIMEOUT
+            )
+
+            print(
+                f"[SEARCH STATUS] "
+                f"{response.status_code}"
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            return data.get("data", [])
+
+        except Timeout:
+            print("[TIMEOUT] búsqueda")
+            return []
+
+        except RequestException as e:
+            print(
+                f"[REQUEST ERROR] "
+                f"búsqueda: {e}"
+            )
+            return []
+
+        except Exception as e:
+            print(
+                f"[JSON ERROR] "
+                f"búsqueda: {e}"
+            )
+            return []

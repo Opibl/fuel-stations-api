@@ -10,21 +10,20 @@ Permitir la búsqueda de estaciones de combustible en base a coordenadas geográ
 
 ### Casos implementados
 
-* Estación más cercana por producto
-* Estación más cercana con menor precio por producto
-* Estación más cercana con tienda por producto
-* Estación más cercana con tienda y menor precio por producto
+- Estación más cercana por producto
+- Estación más cercana con menor precio por producto
+- Soporte para filtrado por disponibilidad de tienda
 
 ---
 
 ## Tecnologías utilizadas
 
-* Python 3.11
-* FastAPI
-* Uvicorn
-* Requests
-* Pytest
-* Swagger UI
+- Python 3.11
+- FastAPI
+- Uvicorn
+- Requests
+- Pytest
+- Swagger UI
 
 ---
 
@@ -115,11 +114,19 @@ Servidor disponible en:
 http://127.0.0.1:8000
 ```
 
-Documentación Swagger:
+La API puede probarse localmente desde Swagger en:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
+
+Desde esta interfaz es posible probar directamente el endpoint:
+
+```http
+GET /api/stations/search
+```
+
+ingresando los parámetros requeridos (`lat`, `lng`, `product`, `nearest`, `store`, `cheapest`).
 
 ---
 
@@ -151,41 +158,35 @@ GET /api/stations/search
 
 ## Parámetros
 
-| Parámetro | Tipo   | Requerido | Descripción                      |
-| --------- | ------ | --------- | -------------------------------- |
-| lat       | float  | Sí        | Latitud                          |
-| lng       | float  | Sí        | Longitud                         |
-| product   | string | Sí        | 93, 95, 97, diesel, kerosene     |
-| nearest   | bool   | No        | Buscar estación más cercana      |
-| store     | bool   | No        | Filtrar estaciones con tienda    |
-| cheapest  | bool   | No        | Buscar estación con menor precio |
+| Parámetro | Tipo | Requerido | Descripción |
+|----------|------|-----------|-------------|
+| lat | float | Sí | Latitud |
+| lng | float | Sí | Longitud |
+| product | string | Sí | 93, 95, 97, diesel, kerosene |
+| nearest | bool | No | Buscar estación más cercana |
+| store | bool | No | Filtrar estaciones con tienda |
+| cheapest | bool | No | Buscar estación con menor precio |
 
 ---
 
 ## Ejemplos de uso
 
-### 1. Estación más cercana
+### Estación más cercana
 
 ```text
-/api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true
+/api/stations/search?lat=-33.0364&lng=-71.6296&product=93&nearest=true
 ```
 
-### 2. Estación más cercana con menor precio
+### Estación más cercana con menor precio
 
 ```text
-/api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true&cheapest=true
+/api/stations/search?lat=-33.0364&lng=-71.6296&product=93&nearest=true&cheapest=true
 ```
 
-### 3. Estación más cercana con tienda
+### Estación con filtro de tienda
 
 ```text
-/api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true&store=true
-```
-
-### 4. Estación más cercana con tienda y menor precio
-
-```text
-/api/stations/search?lat=-33.4463&lng=-70.6427&product=93&nearest=true&store=true&cheapest=true
+/api/stations/search?lat=-33.0364&lng=-71.6296&product=93&nearest=true&store=true
 ```
 
 ---
@@ -196,18 +197,18 @@ GET /api/stations/search
 {
   "success": true,
   "data": {
-    "id": "1556",
-    "compania": "Sin marca",
-    "direccion": "Avenida Matta 665",
+    "id": "1572",
+    "compania": "SHELL",
+    "direccion": "BRASIL 154",
     "comuna": "Santiago Centro",
     "region": "Metropolitana de Santiago",
-    "latitud": -33.4578,
-    "longitud": -70.6423,
-    "distancia_lineal": 1.29,
-    "precio": 1241,
+    "latitud": -33.44241788189269,
+    "longitud": -70.66533923149109,
+    "distancia_lineal": 0.81,
+    "precio": 1515,
     "tiene_tienda": true,
     "tienda": {
-      "codigo": 4,
+      "codigo": null,
       "nombre": "Tienda de conveniencia",
       "tipo": "Conveniencia"
     }
@@ -221,8 +222,8 @@ GET /api/stations/search
 
 La API implementa manejo de errores y excepciones utilizando:
 
-* `HTTPException`
-* `StationNotFoundException`
+- `HTTPException`
+- `StationNotFoundException`
 
 Se retornan respuestas HTTP informativas para errores de búsqueda o parámetros inválidos.
 
@@ -230,58 +231,56 @@ Se retornan respuestas HTTP informativas para errores de búsqueda o parámetros
 
 ## Fuente de datos
 
-La API utiliza datos obtenidos mediante inspección de la página:
+La API utiliza datos obtenidos mediante inspección de la página oficial:
 
 ```text
 https://www.bencinaenlinea.cl/#/busqueda_estaciones
 ```
 
-Endpoint inspeccionado:
+### Endpoints inspeccionados
+
+Detalle por estación:
 
 ```text
 https://api.bencinaenlinea.cl/api/estacion_ciudadano/{id}
 ```
----
-## Nota sobre la obtención del listado
 
-Durante la inspección de la página oficial de **Bencina en Línea**, se identificó el endpoint público utilizado para consultar el detalle de una estación por identificador:
+Listado masivo de estaciones:
 
-```http
-GET /api/estacion_ciudadano/{id}
+```text
+https://api.bencinaenlinea.cl/api/busqueda_estacion_filtro
 ```
-
-Sin embargo, no fue posible identificar un endpoint público de listado masivo de estaciones por zona o coordenadas mediante inspección de red.
-
-Por este motivo, la solución implementa una estrategia de consulta dinámica basada en identificadores reales observados desde la página, aplicando posteriormente la lógica de filtrado por producto, distancia, menor precio y disponibilidad de tienda.
-
-Esta decisión permite mantener el uso de la API inspeccionada solicitada en la prueba técnica, replicando el comportamiento observado desde la página web.
 
 ---
 
-## Nota sobre la estructura de datos
+## Nota sobre la implementación
 
-La prueba técnica incluye un ejemplo de respuesta JSON como referencia.
+Durante la inspección de red se identificó el endpoint público utilizado por la plataforma para obtener el **listado masivo de estaciones**.
 
-Durante la implementación, se utilizó la **API real inspeccionada desde Bencina en Línea**, obtenida directamente desde la página oficial mediante inspección de red.
+La solución utiliza este endpoint como fuente principal de datos y posteriormente aplica:
 
-La estructura de la respuesta real presenta algunas diferencias respecto al ejemplo entregado en la prueba, por lo que se realizó una **normalización de datos** para exponer un formato limpio, consistente y orientado al consumo del endpoint:
+- filtrado por producto
+- cálculo de distancia lineal (Haversine)
+- selección por menor precio
+- filtrado por disponibilidad de tienda
 
-```http
-GET /api/stations/search
-```
+Esto permitió optimizar la estrategia inicial basada en consulta por identificadores individuales, mejorando escalabilidad, rendimiento y cobertura geográfica a nivel nacional.
 
-De esta forma se mantiene toda la información relevante solicitada:
+---
 
-* compañía
-* dirección
-* comuna
-* región
-* coordenadas
-* precio
-* tienda
-* distancia lineal
+## Normalización de datos
 
-Esta decisión se tomó para asegurar una respuesta REST consistente, limpia y fácil de consumir desde clientes externos.
+La estructura de respuesta entregada por la API fuente presenta diferencias respecto al formato solicitado en la prueba técnica.
+
+Por este motivo se implementó una capa de normalización para exponer un formato consistente orientado al consumo REST.
+
+Se normalizan especialmente:
+
+- coordenadas con coma decimal
+- precios nulos o inconsistentes
+- campos opcionales
+- información de tienda
+- nombre de compañía
 
 ---
 

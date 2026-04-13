@@ -19,98 +19,437 @@ class SearchService:
         store=False,
         cheapest=False
     ):
-        stations = self.client.fetch_stations()
-        filtered = []
+        stations = self.client.fetch_stations(lat, lng)
+        candidates = []
 
+        # Primera pasada: filtrar por producto y calcular distancia
         for station in stations:
-            price = self._get_product_price(station, product)
+            price = self._get_product_price(
+                station,
+                product
+            )
 
             if price is None:
                 continue
 
-            has_store = self._has_store(station)
+            try:
+                station_lat = float(
+                    str(
+                        station.get("latitud")
+                        or station.get("Latitud")
+                    ).replace(",", ".")
+                )
 
+                station_lng = float(
+                    str(
+                        station.get("longitud")
+                        or station.get("Longitud")
+                    ).replace(",", ".")
+                )
+
+            except (
+                ValueError,
+                TypeError,
+                KeyError
+            ):
+                continue
+
+            distance = (
+                self.distance_service.haversine(
+                    lat,
+                    lng,
+                    station_lat,
+                    station_lng
+                )
+            )
+
+            candidates.append({
+                "raw": station,
+                "id": str(
+                    station.get("id")
+                    or station.get("CodEs")
+                ),
+                "precio": price,
+                "latitud": station_lat,
+                "longitud": station_lng,
+                "distancia_lineal": round(
+                    distance,
+                    2
+                )
+            })
+
+        if not candidates:
+            raise StationNotFoundException(
+                "No se encontraron estaciones "
+                "para el producto solicitado"
+            )
+
+        # Ordenar por distancia
+        candidates.sort(
+            key=lambda x: x[
+                "distancia_lineal"
+            ]
+        )
+
+        # Revisar solo las 5 más cercanas
+        nearest_candidates = candidates[:5]
+
+        filtered = []
+
+        for item in nearest_candidates:
+            station = item["raw"]
+
+            has_store = self._has_store(
+                station
+            )
+
+            store_data = (
+                self._get_store_data(
+                    station
+                )
+            )
+
+            # Consultar detalle solo si se pide tienda
+            if store and not has_store:
+                try:
+                    detail = (
+                        self.client
+                        .fetch_station_by_id(
+                            item["id"]
+                        )
+                    )
+
+                    has_store = (
+                        self._has_store(
+                            detail
+                        )
+                    )
+
+                    store_data = (
+                        self._get_store_data(
+                            detail
+                        )
+                    )
+
+                except Exception as e:
+                    print(
+                        f"Error detalle "
+                        f"{item['id']}: {e}"
+                    )
+                    continue
+
+            # Aplicar filtro tienda
             if store and not has_store:
                 continue
 
-            distance = self.distance_service.haversine(
-                lat,
-                lng,
-                float(station["latitud"]),
-                float(station["longitud"])
-            )
-
             filtered.append({
-                "id": str(station["id"]),
-                "compania": self._get_company_name(station),
-                "direccion": station["direccion"],
-                "comuna": station["comuna"],
-                "region": station["region"],
-                "latitud": float(station["latitud"]),
-                "longitud": float(station["longitud"]),
-                "distancia_lineal": distance,
-                "precio": price,
-                "tiene_tienda": has_store,
-                "tienda": self._get_store_data(station)
+                "id": item["id"],
+                "compania": (
+                    self._get_company_name(
+                        station
+                    )
+                ),
+                "direccion": (
+                    station.get(
+                        "direccion"
+                    )
+                    or station.get(
+                        "Direccion"
+                    )
+                ),
+                "comuna": (
+                    station.get(
+                        "comuna"
+                    )
+                    or station.get(
+                        "Comuna"
+                    )
+                ),
+                "region": (
+                    station.get(
+                        "region"
+                    )
+                    or station.get(
+                        "Region"
+                    )
+                ),
+                "latitud": item[
+                    "latitud"
+                ],
+                "longitud": item[
+                    "longitud"
+                ],
+                "distancia_lineal": item[
+                    "distancia_lineal"
+                ],
+                "precio": item[
+                    "precio"
+                ],
+                "tiene_tienda": (
+                    has_store
+                ),
+                "tienda": (
+                    store_data
+                )
             })
 
         if not filtered:
             raise StationNotFoundException(
-                "No se encontraron estaciones para los filtros dados"
+                "No se encontraron estaciones "
+                "con los filtros dados"
             )
 
-        result = self._select_best_station(
-            filtered,
-            cheapest
+        result = (
+            self._select_best_station(
+                filtered,
+                cheapest
+            )
         )
 
-        return SuccessResponse(data=result)
+        return SuccessResponse(
+            data=result
+        )
 
-    def _get_product_price(self, station, product):
-        combustibles = station.get("combustibles", [])
+    def _get_product_price(
+        self,
+        station,
+        product
+    ):
+        combustibles = station.get(
+            "combustibles",
+            []
+        )
+
+        prices = station.get(
+            "Prices",
+            []
+        )
 
         product_map = {
-            "93": "93",
-            "95": "95",
-            "97": "97",
-            "diesel": "DI",
-            "kerosene": "KE"
+            "93": [
+                "93",
+                "Gasolina 93"
+            ],
+            "95": [
+                "95",
+                "Gasolina 95"
+            ],
+            "97": [
+                "97",
+                "Gasolina 97"
+            ],
+            "diesel": [
+                "DI",
+                "Diesel"
+            ],
+            "kerosene": [
+                "KE",
+                "Kerosene"
+            ]
         }
 
-        target = product_map.get(product.lower())
+        targets = product_map.get(
+            product.lower()
+        )
 
-        if not target:
+        if not targets:
             return None
 
         for fuel in combustibles:
-            if fuel["nombre_corto"] == target:
-                return int(float(fuel["precio"]))
+            if (
+                fuel.get(
+                    "nombre_corto"
+                )
+                in targets
+            ):
+                try:
+                    return int(
+                        float(
+                            str(
+                                fuel.get(
+                                    "precio"
+                                )
+                            ).replace(
+                                ",",
+                                "."
+                            )
+                        )
+                    )
+                except (
+                    ValueError,
+                    TypeError
+                ):
+                    return None
+
+        for fuel in prices:
+            if (
+                fuel.get(
+                    "Producto"
+                )
+                in targets
+            ):
+                try:
+                    return int(
+                        float(
+                            str(
+                                fuel.get(
+                                    "Precio"
+                                )
+                            ).replace(
+                                ",",
+                                "."
+                            )
+                        )
+                    )
+                except (
+                    ValueError,
+                    TypeError
+                ):
+                    return None
 
         return None
 
-    def _has_store(self, station):
-        services = station.get("servicios", [])
+    def _has_store(
+        self,
+        station
+    ):
+        if (
+            station.get("Tienda")
+            or station.get(
+                "tienda"
+            )
+        ):
+            return True
 
-        return any(
-            "tienda" in service["nombre"].lower()
-            for service in services
+        services = station.get(
+            "Servicios"
         )
 
+        if isinstance(
+            services,
+            dict
+        ):
+            codes = services.get(
+                "CodSer",
+                []
+            )
+
+            if 4 in codes:
+                return True
+
+        services = station.get(
+            "servicios",
+            []
+        )
+
+        for service in services:
+            if isinstance(
+                service,
+                dict
+            ):
+                name = (
+                    service.get(
+                        "nombre"
+                    )
+                    or service.get(
+                        "Nombre"
+                    )
+                    or ""
+                ).lower()
+
+                keywords = [
+                    "tienda",
+                    "pronto",
+                    "upa",
+                    "select",
+                    "market",
+                    "shop"
+                ]
+
+                if any(
+                    k in name
+                    for k in keywords
+                ):
+                    return True
+
+        return False
+
     def _get_store_data(self, station):
+        store = (
+            station.get("Tienda")
+            or station.get("tienda")
+        )
+
+        if store:
+            return {
+                "codigo": (
+                    store.get("CodigoTienda")
+                    or store.get("codigo")
+                ),
+                "nombre": (
+                    store.get("NombreTienda")
+                    or store.get("nombre")
+                ),
+                "tipo": (
+                    store.get("Tipo")
+                    or store.get("tipo")
+                )
+            }
+
+        # Fallback usando servicios
         services = station.get("servicios", [])
 
         for service in services:
-            if "tienda" in service["nombre"].lower():
-                return {
-                    "codigo": service["id"],
-                    "nombre": service["nombre"],
-                    "tipo": "Conveniencia"
-                }
+            if isinstance(service, dict):
+                name = (
+                    service.get("nombre")
+                    or service.get("Nombre")
+                    or ""
+                )
+
+                keywords = [
+                    "tienda",
+                    "pronto",
+                    "upa",
+                    "select",
+                    "market",
+                    "shop"
+                ]
+
+                if any(
+                    k in name.lower()
+                    for k in keywords
+                ):
+                    return {
+                        "codigo": None,
+                        "nombre": name,
+                        "tipo": "Conveniencia"
+                    }
 
         return None
 
-    def _get_company_name(self, station):
-        logo_url = station.get("logo", "").lower()
+    def _get_company_name(
+        self,
+        station
+    ):
+        company = (
+            station.get(
+                "Compania"
+            )
+            or station.get(
+                "compania"
+            )
+        )
+
+        if company:
+            return company
+
+        logo_url = (
+            station.get(
+                "logo"
+            )
+            or ""
+        ).lower()
 
         if "copec" in logo_url:
             return "COPEC"
@@ -121,20 +460,31 @@ class SearchService:
 
         return "Sin marca"
 
-    def _select_best_station(self, stations, cheapest):
+    def _select_best_station(
+        self,
+        stations,
+        cheapest
+    ):
         if cheapest:
             min_price = min(
                 station["precio"]
-                for station in stations
+                for station
+                in stations
             )
 
             stations = [
                 station
-                for station in stations
-                if station["precio"] == min_price
+                for station
+                in stations
+                if (
+                    station["precio"]
+                    == min_price
+                )
             ]
 
         return min(
             stations,
-            key=lambda x: x["distancia_lineal"]
+            key=lambda x: x[
+                "distancia_lineal"
+            ]
         )
