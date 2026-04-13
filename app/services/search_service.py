@@ -86,113 +86,73 @@ class SearchService:
                 "para el producto solicitado"
             )
 
-        # Ordenar por distancia
+        
         candidates.sort(
             key=lambda x: x[
                 "distancia_lineal"
             ]
         )
 
-        # Revisar solo las 5 más cercanas
+        
         nearest_candidates = candidates[:5]
 
         filtered = []
 
         for item in nearest_candidates:
             station = item["raw"]
+            detail = station
 
-            has_store = self._has_store(
-                station
-            )
-
-            store_data = (
-                self._get_store_data(
-                    station
+            
+            try:
+                detail = self.client.fetch_station_by_id(
+                    item["id"]
                 )
-            )
+                print("DETAIL RESPONSE:", detail)
+            except Exception as e:
+                print(
+                    f"Error detalle "
+                    f"{item['id']}: {e}"
+                )
 
-            # Consultar detalle solo si se pide tienda
-            if store and not has_store:
-                try:
-                    detail = (
-                        self.client
-                        .fetch_station_by_id(
-                            item["id"]
-                        )
-                    )
+            
+            has_store = self._has_store(detail)
+            store_data = self._get_store_data(detail)
 
-                    has_store = (
-                        self._has_store(
-                            detail
-                        )
-                    )
-
-                    store_data = (
-                        self._get_store_data(
-                            detail
-                        )
-                    )
-
-                except Exception as e:
-                    print(
-                        f"Error detalle "
-                        f"{item['id']}: {e}"
-                    )
-                    continue
-
-            # Aplicar filtro tienda
+            
             if store and not has_store:
                 continue
 
             filtered.append({
                 "id": item["id"],
-                "compania": (
-                    self._get_company_name(
-                        station
-                    )
+                "compania": self._get_company_name(
+                    detail
                 ),
                 "direccion": (
-                    station.get(
-                        "direccion"
-                    )
-                    or station.get(
-                        "Direccion"
-                    )
+                    detail.get("direccion")
+                    or detail.get("Direccion")
+                    or station.get("direccion")
+                    or station.get("Direccion")
                 ),
                 "comuna": (
-                    station.get(
-                        "comuna"
-                    )
-                    or station.get(
-                        "Comuna"
-                    )
+                    detail.get("comuna")
+                    or detail.get("Comuna")
+                    or station.get("comuna")
+                    or station.get("Comuna")
                 ),
                 "region": (
-                    station.get(
-                        "region"
-                    )
-                    or station.get(
-                        "Region"
-                    )
+                    detail.get("region")
+                    or detail.get("Region")
+                    or station.get("region")
+                    or station.get("Region")
                 ),
-                "latitud": item[
-                    "latitud"
-                ],
-                "longitud": item[
-                    "longitud"
-                ],
+                "latitud": item["latitud"],
+                "longitud": item["longitud"],
                 "distancia_lineal": item[
                     "distancia_lineal"
                 ],
-                "precio": item[
-                    "precio"
-                ],
-                "tiene_tienda": (
-                    has_store
-                ),
-                "tienda": (
-                    store_data
-                )
+                "precio": item["precio"],
+                "tiene_tienda": has_store,
+                "tienda": store_data
             })
 
         if not filtered:
@@ -398,35 +358,29 @@ class SearchService:
                 )
             }
 
-        # Fallback usando servicios
-        services = station.get("servicios", [])
+        services = station.get(
+            "servicios",
+            []
+        )
 
         for service in services:
-            if isinstance(service, dict):
-                name = (
-                    service.get("nombre")
-                    or service.get("Nombre")
-                    or ""
-                )
+            if not isinstance(service, dict):
+                continue
 
-                keywords = [
-                    "tienda",
-                    "pronto",
-                    "upa",
-                    "select",
-                    "market",
-                    "shop"
-                ]
+            name = str(
+                service.get("nombre")
+                or service.get("Nombre")
+                or ""
+            )
 
-                if any(
-                    k in name.lower()
-                    for k in keywords
-                ):
-                    return {
-                        "codigo": None,
-                        "nombre": name,
-                        "tipo": "Conveniencia"
-                    }
+            if "tienda" in name.lower():
+                return {
+                    "codigo": str(
+                        service.get("id")
+                    ),
+                    "nombre": name,
+                    "tipo": "Conveniencia"
+                }
 
         return None
 
