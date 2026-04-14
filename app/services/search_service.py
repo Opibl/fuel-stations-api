@@ -106,6 +106,8 @@ class SearchService:
                 detail = self.client.fetch_station_by_id(
                     item["id"]
                 )
+                print("DETAIL:", detail)
+
             except Exception as e:
                 print(
                     f"Error detalle "
@@ -371,7 +373,16 @@ class SearchService:
                 or ""
             )
 
-            if "tienda" in name.lower():
+            keywords = [
+                "tienda",
+                "pronto",
+                "upa",
+                "select",
+                "market",
+                "shop"
+            ]
+
+            if any(k in name.lower() for k in keywords):
                 return {
                     "codigo": str(
                         service.get("id")
