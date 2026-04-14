@@ -114,6 +114,9 @@ Servidor disponible en:
 http://127.0.0.1:8000
 ```
 
+> Nota: la ruta raíz (`/`) no expone contenido y puede responder `404 Not Found`.
+> La documentación interactiva se encuentra en `/docs`.
+
 La API puede probarse localmente desde Swagger en:
 
 ```text
