@@ -141,7 +141,7 @@ pytest
 Resultado esperado:
 
 ```text
-1 passed
+3 passed
 ```
 
 ---
